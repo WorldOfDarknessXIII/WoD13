@@ -79,7 +79,7 @@
 
 	// NPCs within 1 tile aggro if facing the source
 	for (var/mob/living/carbon/human/npc/NPC in oviewers(1, source))
-		if (NPC.CheckMove())
+		if (!NPC.CheckMove())
 			continue
 		if(get_turf(src) == turn(NPC.dir, 180))
 			continue
@@ -88,7 +88,7 @@
 
 	// NPCs within effective range aggro if facing the source and the aggravator isn't in darkness
 	for (var/mob/living/carbon/human/npc/NPC in viewers(actual_range, source))
-		if (NPC.CheckMove())
+		if (!NPC.CheckMove())
 			continue
 
 		if (affects_source && (NPC == source))

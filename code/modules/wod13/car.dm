@@ -891,7 +891,7 @@ SUBSYSTEM_DEF(carpool)
 								step(NPC, angle2dir(pick(dodge_direction)), NPC.total_multiplicative_slowdown())
 								COOLDOWN_START(NPC, car_dodge, 2 SECONDS)
 								if(prob(50))
-									NPC.RealisticSay(pick(NPC.socialrole.car_dodged))
+									NPC.realistic_say(pick(NPC.socialrole.car_dodged))
 
 		var/turf/hit_turf
 		var/list/in_line = get_line(src, check_turf)

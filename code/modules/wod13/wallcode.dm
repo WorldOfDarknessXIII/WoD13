@@ -1158,7 +1158,6 @@
 	..()
 	set_light(1, 0.5, "#1b7c4c")
 
-
 /turf/open/floor/plating/vampacid/Entered(atom/movable/AM)
 	if(acid_burn(AM))
 		START_PROCESSING(SSobj, src)
@@ -1170,8 +1169,6 @@
 		L.apply_damage(10, CLONE)
 		L.apply_damage(30, TOX)
 		to_chat(L, "<span class='warning'>Your flesh burns!</span>")
-
-
 
 /obj/effect/decal/coastline
 	name = "water"

@@ -1,6 +1,7 @@
 
 /datum/socialrole/bandit
-	s_tones = list("albino",
+	s_tones = list(
+		"albino",
 		"caucasian1",
 		"caucasian2",
 		"caucasian3",
@@ -11,7 +12,8 @@
 		"arab",
 		"indian",
 		"african1",
-		"african2")
+		"african2"
+	)
 
 	min_age = 18
 	max_age = 45
@@ -20,43 +22,49 @@
 	surnames = null
 	is_criminal = TRUE
 
-	hair_colors = list("040404",	//Black
-											"120b05",	//Dark Brown
-											"342414",	//Brown
-											"554433")	//Light Brown
-	male_hair = list("Balding Hair",
-										"Bedhead",
-										"Bedhead 2",
-										"Bedhead 3",
-										"Boddicker",
-										"Business Hair",
-										"Business Hair 2",
-										"Business Hair 3",
-										"Business Hair 4",
-										"Coffee House",
-										"Combover",
-										"Crewcut",
-										"Father",
-										"Flat Top",
-										"Gelled Back",
-										"Joestar",
-										"Keanu Hair",
-										"Oxton",
-										"Volaju")
-	male_facial = list("Beard (Abraham Lincoln)",
-											"Beard (Chinstrap)",
-											"Beard (Full)",
-											"Beard (Cropped Fullbeard)",
-											"Beard (Hipster)",
-											"Beard (Neckbeard)",
-											"Beard (Three o Clock Shadow)",
-											"Beard (Five o Clock Shadow)",
-											"Beard (Seven o Clock Shadow)",
-											"Moustache (Hulk Hogan)",
-											"Moustache (Watson)",
-											"Sideburns (Elvis)",
-											"Sideburns",
-											"Shaved")
+	hair_colors = list(
+		"040404",	//Black
+		"120b05",	//Dark Brown
+		"342414",	//Brown
+		"554433"	//Light Brown
+	)
+	male_hair = list(
+		"Balding Hair",
+		"Bedhead",
+		"Bedhead 2",
+		"Bedhead 3",
+		"Boddicker",
+		"Business Hair",
+		"Business Hair 2",
+		"Business Hair 3",
+		"Business Hair 4",
+		"Coffee House",
+		"Combover",
+		"Crewcut",
+		"Father",
+		"Flat Top",
+		"Gelled Back",
+		"Joestar",
+		"Keanu Hair",
+		"Oxton",
+		"Volaju"
+	)
+	male_facial = list(
+		"Beard (Abraham Lincoln)",
+		"Beard (Chinstrap)",
+		"Beard (Full)",
+		"Beard (Cropped Fullbeard)",
+		"Beard (Hipster)",
+		"Beard (Neckbeard)",
+		"Beard (Three o Clock Shadow)",
+		"Beard (Five o Clock Shadow)",
+		"Beard (Seven o Clock Shadow)",
+		"Moustache (Hulk Hogan)",
+		"Moustache (Watson)",
+		"Sideburns (Elvis)",
+		"Sideburns",
+		"Shaved"
+	)
 
 	shoes = list(
 		/obj/item/clothing/shoes/vampire/sneakers,

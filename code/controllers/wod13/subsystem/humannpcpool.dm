@@ -1,7 +1,7 @@
 SUBSYSTEM_DEF(humannpcpool)
 	name = "Human NPC Pool"
 	flags = SS_POST_FIRE_TIMING|SS_NO_INIT|SS_BACKGROUND
-	priority = FIRE_PRIORITY_VERYLOW
+	priority = FIRE_PRIORITY_NPC
 	runlevels = RUNLEVEL_GAME | RUNLEVEL_POSTGAME
 	wait = 30
 
@@ -27,17 +27,7 @@ SUBSYSTEM_DEF(humannpcpool)
 		var/mob/living/carbon/human/npc/NPC = currentrun[currentrun.len]
 		--currentrun.len
 
-		if (QDELETED(NPC)) // Some issue causes nulls to get into this list some times. This keeps it running, but the bug is still there.
-			GLOB.npc_list -= NPC		//HUH??? A BUG? NO WAY
-			GLOB.alive_npc_list -= NPC
-//			if(QDELETED(NPC))
-			log_world("Found a null in npc list!")
-//			else
-//				log_world("Found a dead NPC in npc list!")
-			continue
-
-		//!NPC.route_optimisation()
-		if(MC_TICK_CHECK)
+		if (MC_TICK_CHECK)
 			return
 		NPC.handle_automated_movement()
 
@@ -45,7 +35,13 @@ SUBSYSTEM_DEF(humannpcpool)
 	if (!length(GLOB.npc_spawn_points))
 		return
 
-	while(length(GLOB.alive_npc_list) < npc_max)
-		var/atom/kal = pick(GLOB.npc_spawn_points)
-		var/NEPIS = pick(/mob/living/carbon/human/npc/police, /mob/living/carbon/human/npc/bandit, /mob/living/carbon/human/npc/hobo, /mob/living/carbon/human/npc/walkby, /mob/living/carbon/human/npc/business)
-		new NEPIS(get_turf(kal))
+	while (length(GLOB.alive_npc_list) < npc_max)
+		var/atom/chosen_spawn_point = pick(GLOB.npc_spawn_points)
+		var/creating_npc = pick(
+			/mob/living/carbon/human/npc/police,
+			/mob/living/carbon/human/npc/bandit,
+			/mob/living/carbon/human/npc/hobo,
+			/mob/living/carbon/human/npc/walkby,
+			/mob/living/carbon/human/npc/business
+		)
+		new creating_npc(get_turf(chosen_spawn_point))

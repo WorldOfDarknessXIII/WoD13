@@ -4,17 +4,25 @@
 	uniforms = list(/obj/item/clothing/under/vampire/emo)
 	pockets = list(/obj/item/stack/dollar/rand)
 
-	male_phrases = list("Pss... wanna try some weed?",
-											"Hey, vagabond...",
-											"Check this shit...")
-	neutral_phrases = list("Pss... wanna try some weed?",
-											"Hey, vagabond...",
-											"Check this shit...")
-	random_phrases = list("Pss... wanna try some weed?",
-											"Hey, vagabond...",
-											"Check this shit...")
+	male_phrases = list(
+		"Pss... wanna try some weed?",
+		"Hey, vagabond...",
+		"Check this shit..."
+	)
+	neutral_phrases = list(
+		"Pss... wanna try some weed?",
+		"Hey, vagabond...",
+		"Check this shit..."
+	)
+	random_phrases = list(
+		"Pss... wanna try some weed?",
+		"Hey, vagabond...",
+		"Check this shit..."
+	)
 	answer_phrases = list("Nothing personal...")
-	help_phrases = list("Cops!",
-											"Fuck the police!!",
-											"COPS?!!")
+	help_phrases = list(
+		"Cops!",
+		"Fuck the police!!",
+		"COPS?!!"
+	)
 	is_criminal = TRUE

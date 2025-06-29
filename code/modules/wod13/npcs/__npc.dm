@@ -3,6 +3,10 @@
 
 /mob/living/carbon/human/npc
 	name = "Loh ebanii"
+
+	// NPCs normally walk around slowly
+	move_intent = MOVE_INTENT_WALK
+
 	/// Until we do a full NPC refactor (see: rewriting every single bit of code)
 	/// use this to determine NPC weapons and their chances to spawn with them -- assuming you want the NPC to do that
 	/// Otherwise just set it under the NPC's type as
@@ -21,17 +25,16 @@
 			/obj/item/gun/ballistic/automatic/vampire/ar15 = 100,
 		)
 	)
-	a_intent = INTENT_HELP
 	var/datum/socialrole/socialrole
 
 	var/is_talking = FALSE
-	var/last_annoy = 0
+	COOLDOWN_DECLARE(annoyed_cooldown)
 	COOLDOWN_DECLARE(car_dodge)
 	var/hostile = FALSE
-	var/fights_anyway = FALSE
-	var/last_danger_meet = 0
+	var/aggressive = FALSE
+	var/last_antagonised = 0
 	var/mob/living/danger_source
-	var/atom/movable/less_danger
+	var/obj/effect/fire/afraid_of_fire
 	var/mob/living/last_attacker
 	var/last_health = 100
 	var/mob/living/last_damager
@@ -74,19 +77,27 @@
 
 	var/list/drop_on_death_list = null
 
+/mob/living/carbon/human/npc/Initialize(mapload)
+	. = ..()
+
+	GLOB.npc_list += src
+	GLOB.alive_npc_list += src
+
+	return INITIALIZE_HINT_LATELOAD
+
 /mob/living/carbon/human/npc/LateInitialize(mapload)
 	. = ..()
-	if(role_weapons_chances.Find(type))
+
+	if (role_weapons_chances.Find(type))
 		for(var/weapon in role_weapons_chances[type])
 			if(prob(role_weapons_chances[type][weapon]))
 				my_weapon = new weapon(src)
 				break
-	if(!my_weapon && my_weapon_type)
+
+	if (!my_weapon && my_weapon_type)
 		my_weapon = new my_weapon_type(src)
 
-
-
-	if(my_weapon)
+	if (my_weapon)
 		has_weapon = TRUE
 		equip_to_appropriate_slot(my_weapon)
 		if(istype(my_weapon, /obj/item/gun/ballistic))
@@ -94,10 +105,17 @@
 			RegisterSignal(my_weapon, COMSIG_GUN_EMPTY, PROC_REF(handle_empty_gun))
 		register_sticky_item(my_weapon)
 
-	if(my_backup_weapon_type)
+	if (my_backup_weapon_type)
 		my_backup_weapon = new my_backup_weapon_type(src)
 		equip_to_appropriate_slot(my_backup_weapon)
 		register_sticky_item(my_backup_weapon)
+
+/mob/living/carbon/human/npc/Destroy()
+	GLOB.npc_list -= src
+	GLOB.alive_npc_list -= src
+	SShumannpcpool.npclost()
+
+	. = ..()
 
 //====================Sticky Item Handling====================
 /mob/living/carbon/human/npc/proc/register_sticky_item(obj/item/my_item)
@@ -108,74 +126,73 @@
 
 /mob/living/carbon/human/npc/death(gibbed)
 	. = ..()
-	if(drop_on_death_list?.len)
-		for(var/obj/item/dropping_item in drop_on_death_list)
-			drop_on_death_list -= dropping_item
-			if(HAS_TRAIT_FROM(dropping_item, TRAIT_NODROP, NPC_ITEM_TRAIT))
-				REMOVE_TRAIT(dropping_item, TRAIT_NODROP, NPC_ITEM_TRAIT)
-			dropItemToGround(dropping_item, TRUE)
+
+	if (!LAZYLEN(drop_on_death_list))
+		return
+
+	for (var/obj/item/dropping_item in drop_on_death_list)
+		LAZYREMOVE(drop_on_death_list, dropping_item)
+		REMOVE_TRAIT(dropping_item, TRAIT_NODROP, NPC_ITEM_TRAIT)
+		dropItemToGround(dropping_item, TRUE)
 
 //If an npc's item has TRAIT_NODROP, we NEVER drop it, even if it is forced.
 /mob/living/carbon/human/npc/doUnEquip(obj/item/I, force, newloc, no_move, invdrop = TRUE, silent = FALSE)
-	if(I && HAS_TRAIT(I, TRAIT_NODROP))
+	if (I && HAS_TRAIT(I, TRAIT_NODROP))
 		return FALSE
+
 	. = ..()
 //============================================================
 
+/mob/living/carbon/human/npc/proc/realistic_say(message)
+	GLOB.move_manager.stop_looping(src, SShumannpcpool)
 
-/datum/movespeed_modifier/npc
-	multiplicative_slowdown = 2
-
-/mob/living/carbon/human/npc/proc/GetSayDelay(message)
-	var/delay = length_char(message)
-	return delay
-
-/mob/living/carbon/human/npc/proc/RealisticSay(message)
-	walk(src,0)
-	if(!message)
+	if (!message)
 		return
-	if(is_talking)
+	if (stat >= HARD_CRIT)
 		return
-	if(stat >= HARD_CRIT)
+	if (is_talking)
 		return
 	is_talking = TRUE
-	var/delay = round(length_char(message)/2)
-	spawn(5)
-		remove_overlay(SAY_LAYER)
-		var/mutable_appearance/say_overlay = mutable_appearance('icons/mob/talk.dmi', "default0", -SAY_LAYER)
-		overlays_standing[SAY_LAYER] = say_overlay
-		apply_overlay(SAY_LAYER)
-		spawn(max(1, delay))
-			if(stat != DEAD)
-				remove_overlay(SAY_LAYER)
-				say(message)
-				is_talking = FALSE
+
+	addtimer(CALLBACK(src, PROC_REF(start_talking), message), 0.5 SECONDS)
+
+/mob/living/carbon/human/npc/proc/start_talking(message)
+	if (is_talking)
+		return
+
+	create_typing_indicator()
+	var/typing_delay = round(length_char(message) * 0.5)
+	addtimer(CALLBACK(src, PROC_REF(finish_talking), message), max(0.1 SECONDS, typing_delay))
+
+/mob/living/carbon/human/npc/proc/finish_talking(message)
+	remove_typing_indicator()
+	say(message)
+	is_talking = FALSE
 
 /mob/living/carbon/human/npc/proc/Annoy(atom/source)
-	walk(src,0)
-	if(CheckMove())
+	GLOB.move_manager.stop_looping(src, SShumannpcpool)
+
+	if (!can_npc_move())
 		return
-	if(is_talking)
+	if (danger_source)
 		return
-	if(danger_source)
+
+	if (!COOLDOWN_FINISHED(src, annoyed_cooldown))
 		return
-	if(stat >= HARD_CRIT)
-		return
-	if(world.time <= last_annoy+50)
-		return
+	COOLDOWN_START(src, annoyed_cooldown, 5 SECONDS)
+
 	if(source)
-		spawn(rand(3, 7))
-			face_atom(source)
-	last_annoy = world.time
+		addtimer(CALLBACK(src, PROC_REF(face_atom), source), rand(0.3 SECONDS, 0.7 SECONDS))
+
 	var/phrase
-	if(prob(50))
+	if (prob(50))
 		phrase = pick(socialrole.neutral_phrases)
 	else
-		if(gender == MALE)
+		if (gender == MALE)
 			phrase = pick(socialrole.male_phrases)
 		else
 			phrase = pick(socialrole.female_phrases)
-	RealisticSay(phrase)
+	realistic_say(phrase)
 
 /mob/living/carbon/human/Bump(atom/Obstacle)
 	. = ..()
@@ -185,35 +202,45 @@
 			NPC.Annoy(src)
 
 /mob/living/carbon/Move(NewLoc, direct)
-	if(ishuman(src))
+	if (ishuman(src))
 		var/mob/living/carbon/human/H = src
 		H.update_shadow()
-	if(istype(src, /mob/living/carbon/human/npc))
-		var/mob/living/carbon/human/npc/CPN = src
-		if(CPN.CheckMove())
-			walk(src,0)
-		var/getaway = CPN.stopturf+1
-		if(!CPN.old_movement)
-			getaway = 2
-		if(get_dist(src, CPN.walktarget) <= getaway)
-			walk(src,0)
-			CPN.walktarget = null
-	if(HAS_TRAIT(src, TRAIT_RUBICON))
+
+	if (HAS_TRAIT(src, TRAIT_RUBICON))
 		if(istype(NewLoc, /turf/open/floor/plating/shit))
 			return
+
 	. = ..()
 
-/mob/living/carbon/human/npc/attack_hand(mob/user)
-	if(user)
-		if(user.a_intent == INTENT_HELP)
-			Annoy(user)
-		if(user.a_intent == INTENT_DISARM)
-			Aggro(user, TRUE)
-		if(user.a_intent == INTENT_HARM)
-			for(var/mob/living/carbon/human/npc/NEPIC in oviewers(7, src))
-				NEPIC.Aggro(user)
-			Aggro(user, TRUE)
-	..()
+/mob/living/carbon/human/npc/Move(NewLoc, direct)
+	if (!can_npc_move())
+		GLOB.move_manager.stop_looping(src, SShumannpcpool)
+	var/getaway = stopturf + 1
+	if (!old_movement)
+		getaway = 2
+	if (get_dist(src, walktarget) <= getaway)
+		GLOB.move_manager.stop_looping(src, SShumannpcpool)
+		walktarget = null
+
+	. = ..()
+
+// TODO: [Lucia] split this into registered signals
+/mob/living/carbon/human/npc/attack_hand(mob/user, list/modifiers)
+	if (!isliving(user))
+		return
+	var/mob/living/hit_by = user
+
+	if (hit_by.combat_mode == FALSE)
+		Annoy(user)
+	else
+		for(var/mob/living/carbon/human/npc/NEPIC in oviewers(7, src))
+			NEPIC.Aggro(user)
+		Aggro(user, TRUE)
+
+	if (hit_by.combat_mode == INTENT_DISARM)
+		Aggro(user, TRUE)
+
+	. = ..()
 
 /mob/living/carbon/human/npc/on_hit(obj/projectile/P)
 	. = ..()
@@ -228,7 +255,7 @@
 	var/witness_count
 
 	for (var/mob/living/carbon/human/npc/NEPIC in viewers(7, usr))
-		if (NEPIC && NEPIC.stat != DEAD)
+		if (NEPIC?.stat != DEAD)
 			witness_count++
 		if (witness_count > 1)
 			for (var/obj/item/police_radio/radio in GLOB.police_radios)
@@ -245,66 +272,22 @@
 
 /mob/living/carbon/human/npc/attackby(obj/item/W, mob/living/user, params)
 	. = ..()
-	if(user)
-		if(W.force > 5 || (W.force && src.health < src.maxHealth))
-			for(var/mob/living/carbon/human/npc/NEPIC in oviewers(7, src))
-				NEPIC.Aggro(user)
-			Aggro(user, TRUE)
+	if (!user)
+		return
+	if (!W.force || ((W.force <= 5) && (health >= maxHealth)))
+		return
+
+	for (var/mob/living/carbon/human/npc/NEPIC in oviewers(7, src))
+		NEPIC.Aggro(user)
+	Aggro(user, TRUE)
 
 /mob/living/carbon/human/npc/grabbedby(mob/living/carbon/user, supress_message = FALSE)
 	. = ..()
+
 	last_grab = world.time
 
-/mob/living/carbon/human/npc/proc/EmoteAction()
-	walk(src,0)
-	if(CheckMove())
-		return
-	var/shitemote = pick("sigh", "smile", "stare", "look", "spin", "giggle", "blink", "blush", "nod", "sniff", "shrug", "cough", "yawn")
-	if(!is_talking)
-		is_talking = TRUE
-		spawn(rand(5, 10))
-			emote(shitemote)
-			is_talking = FALSE
-
-/mob/living/carbon/human/npc/proc/StareAction()
-	walk(src,0)
-	if(CheckMove())
-		return
-	if(!is_talking)
-		var/list/interest_persons = list()
-		for(var/mob/living/carbon/human/H in viewers(4, src))
-			if(H)
-				if(H != src)
-					interest_persons += H
-		if(length(interest_persons))
-			is_talking = TRUE
-			spawn(rand(2, 7))
-				face_atom(pick(interest_persons))
-				spawn(rand(1, 5))
-					is_talking = FALSE
-
-/mob/living/carbon/human/npc/proc/SpeechAction()
-	walk(src,0)
-	if(CheckMove())
-		return
-	if(!is_talking)
-		var/list/interest_persons = list()
-		for(var/mob/living/carbon/human/npc/H in viewers(4, src))
-			if(H)
-				if(H != src && !H.CheckMove())
-					interest_persons += H
-		if(length(interest_persons))
-			var/mob/living/carbon/human/npc/N = pick(interest_persons)
-			face_atom(N)
-			var/question = pick(socialrole.random_phrases)
-			RealisticSay(question)
-			spawn(rand(1, 5))
-				N.face_atom(src)
-				N.is_talking = TRUE
-				spawn(GetSayDelay(question))
-					N.is_talking = FALSE
-					N.RealisticSay(pick(N.socialrole.answer_phrases))
-
+// TODO: [Lucia] reimplement ghouls
+/*
 /mob/living/carbon/human/npc/proc/ghoulificate(mob/owner)
 	set waitfor = FALSE
 	var/list/mob/dead/observer/candidates = pollCandidatesForMob("Do you want to play as [owner]`s ghoul?", null, null, null, 50, src)
@@ -322,3 +305,4 @@
 				to_chat(src, "<span class='userdanger'><b>AS PRECIOUS VITAE ENTER YOUR MOUTH, YOU NOW ARE IN THE BLOODBOND OF [owner]. SERVE YOUR REGNANT CORRECTLY, OR YOUR ACTIONS WILL NOT BE TOLERATED.</b></span>")
 				return TRUE
 	return FALSE
+*/

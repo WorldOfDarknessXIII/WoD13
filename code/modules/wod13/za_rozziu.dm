@@ -30,7 +30,7 @@ SUBSYSTEM_DEF(zombiepool)
 			log_world("Found a null in npc list!")
 			continue
 
-		//!NPC.route_optimisation()
+		//NPC.observed_by_player()
 		if(MC_TICK_CHECK)
 			return
 		Z.handle_automated_patriotification()

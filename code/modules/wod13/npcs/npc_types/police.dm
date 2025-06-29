@@ -1,5 +1,5 @@
 /mob/living/carbon/human/npc/police
-	fights_anyway = TRUE
+	aggressive = TRUE
 	max_stat = 4
 	my_backup_weapon_type = /obj/item/melee/classic_baton/vampire
 

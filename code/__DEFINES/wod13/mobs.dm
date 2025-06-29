@@ -10,8 +10,7 @@
 #define iscathayan(A) (FALSE)
 #define isgarou(A) (FALSE)
 
-// TODO: [Lucia] reimplement npcs
-#define isnpc(A) (FALSE)
+#define isnpc(A) (istype(A, /mob/living/carbon/human/npc))
 
 #define SOUL_PRESENT 1
 #define SOUL_ABSENT 2

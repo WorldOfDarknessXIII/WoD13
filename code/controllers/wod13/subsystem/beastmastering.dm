@@ -30,7 +30,7 @@ SUBSYSTEM_DEF(beastmastering)
 			log_world("Found a null in npc list!")
 			continue
 
-		//!NPC.route_optimisation()
+		//NPC.observed_by_player()
 		if(MC_TICK_CHECK)
 			return
 		NPC.handle_automated_beasting()

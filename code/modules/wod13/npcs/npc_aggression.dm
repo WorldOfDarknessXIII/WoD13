@@ -1,32 +1,55 @@
-/mob/living/carbon/human/npc/proc/Aggro(mob/victim, attacked = FALSE)
-	if(attacked && danger_source != victim)
-		walk(src,0)
-	if(victim == src)
+/mob/living/carbon/human/npc/proc/Aggro(mob/living/victim, attacked = FALSE)
+	if (stat == DEAD)
 		return
-	if (istype(victim, /mob/living/carbon/human/npc))
+	if (attacked && danger_source != victim)
+		GLOB.move_manager.stop_looping(src, SShumannpcpool)
+	if (victim == src)
 		return
-	if((stat != DEAD) && !HAS_TRAIT(victim, TRAIT_DEATHCOMA))
+	if (isnpc(victim))
+		return
+
+	// If the victim doesn't appear dead, enter combat mode and set
+	// them as the NPC's danger source.
+	if (!HAS_TRAIT(victim, TRAIT_DEATHCOMA))
+		set_combat_mode(TRUE)
+		if (move_intent == MOVE_INTENT_WALK)
+			toggle_move_intent()
+
 		danger_source = victim
 		if(attacked)
 			last_attacker = victim
 			if(health != last_health)
 				last_health = health
 				last_damager = victim
-	if(CheckMove())
+
+	if (!can_npc_move())
 		return
-	if((last_danger_meet + 5 SECONDS) < world.time)
-		last_danger_meet = world.time
-		if(prob(50))
-			if(!my_weapon)
-				if(prob(50))
-					emote("scream")
-				else
-					RealisticSay(pick(socialrole.help_phrases))
-			else
-				RealisticSay(pick(socialrole.help_phrases))
+	if ((last_antagonised + 5 SECONDS) >= world.time)
+		return
+	last_antagonised = world.time
+
+	if (prob(50))
+		if (!my_weapon && prob(50))
+			emote("scream")
+		else
+			realistic_say(pick(socialrole.help_phrases))
+
+/mob/living/carbon/human/npc/proc/end_combat()
+	danger_source = null
+	if (has_weapon)
+		if (get_active_held_item() == my_weapon)
+			npc_stow_weapon()
+		else
+			has_weapon = FALSE
+	walktarget = ChoosePath()
+
+	set_combat_mode(FALSE)
+	if (move_intent == MOVE_INTENT_RUN)
+		toggle_move_intent()
 
 /mob/living/carbon/human/npc/proc/handle_gun(obj/item/gun/ballistic/weapon, mob/living/user, atom/target, params, zone_override)
 	SIGNAL_HANDLER
+
 	if(weapon.loc != src)
 		UnregisterSignal(weapon, COMSIG_GUN_FIRED)
 		UnregisterSignal(weapon, COMSIG_GUN_EMPTY)
@@ -57,34 +80,43 @@
 
 /mob/living/carbon/human/npc/proc/handle_empty_gun()
 	SIGNAL_HANDLER
+
 	UnregisterSignal(my_weapon, COMSIG_GUN_FIRED)
 	UnregisterSignal(my_weapon, COMSIG_GUN_EMPTY)
 	npc_stow_weapon()
-	if(my_backup_weapon && !spawned_backup_weapon)
-		npc_draw_backup_weapon()
-		my_weapon = my_backup_weapon
-		spawned_backup_weapon = TRUE
+
+	if (!my_backup_weapon || spawned_backup_weapon)
+		return
+	npc_draw_backup_weapon()
+	my_weapon = my_backup_weapon
+	spawned_backup_weapon = TRUE
 
 /mob/living/carbon/human/npc/proc/npc_stow_weapon()
-	if(my_weapon)
-		REMOVE_TRAIT(my_weapon, TRAIT_NODROP, NPC_ITEM_TRAIT)
-		temporarilyRemoveItemFromInventory(my_weapon, TRUE)
-		equip_to_appropriate_slot(my_weapon)
-		ADD_TRAIT(my_weapon, TRAIT_NODROP, NPC_ITEM_TRAIT)
-		spawned_weapon = FALSE
+	if (!my_weapon)
+		return
+
+	REMOVE_TRAIT(my_weapon, TRAIT_NODROP, NPC_ITEM_TRAIT)
+	temporarilyRemoveItemFromInventory(my_weapon, TRUE)
+	equip_to_appropriate_slot(my_weapon)
+	ADD_TRAIT(my_weapon, TRAIT_NODROP, NPC_ITEM_TRAIT)
+	spawned_weapon = FALSE
 
 /mob/living/carbon/human/npc/proc/npc_draw_weapon()
-	if(my_weapon)
-		REMOVE_TRAIT(my_weapon, TRAIT_NODROP, NPC_ITEM_TRAIT)
-		temporarilyRemoveItemFromInventory(my_weapon, TRUE)
-		put_in_active_hand(my_weapon)
-		ADD_TRAIT(my_weapon, TRAIT_NODROP, NPC_ITEM_TRAIT)
-		spawned_weapon = TRUE
+	if (!my_weapon)
+		return
+
+	REMOVE_TRAIT(my_weapon, TRAIT_NODROP, NPC_ITEM_TRAIT)
+	temporarilyRemoveItemFromInventory(my_weapon, TRUE)
+	put_in_active_hand(my_weapon)
+	ADD_TRAIT(my_weapon, TRAIT_NODROP, NPC_ITEM_TRAIT)
+	spawned_weapon = TRUE
 
 /mob/living/carbon/human/npc/proc/npc_draw_backup_weapon()
-	if(my_backup_weapon)
-		REMOVE_TRAIT(my_backup_weapon, TRAIT_NODROP, NPC_ITEM_TRAIT)
-		temporarilyRemoveItemFromInventory(my_backup_weapon, TRUE)
-		put_in_active_hand(my_backup_weapon)
-		ADD_TRAIT(my_backup_weapon, TRAIT_NODROP, NPC_ITEM_TRAIT)
-		spawned_weapon = TRUE
+	if (!my_backup_weapon)
+		return
+
+	REMOVE_TRAIT(my_backup_weapon, TRAIT_NODROP, NPC_ITEM_TRAIT)
+	temporarilyRemoveItemFromInventory(my_backup_weapon, TRUE)
+	put_in_active_hand(my_backup_weapon)
+	ADD_TRAIT(my_backup_weapon, TRAIT_NODROP, NPC_ITEM_TRAIT)
+	spawned_weapon = TRUE

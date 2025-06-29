@@ -23,7 +23,7 @@ SUBSYSTEM_DEF(die_in_a_fire)
 			log_world("Found a null in fires list!")
 			continue
 
-		//!NPC.route_optimisation()
+		//NPC.observed_by_player()
 		if(MC_TICK_CHECK)
 			return
 		F.handle_automated_spread()
@@ -131,15 +131,17 @@ SUBSYSTEM_DEF(die_in_a_fire)
 		L.fire_stacks += 5
 		L.IgniteMob()
 
-/obj/effect/fire/Destroy()
-	. = ..()
-	set_light(0)
-	GLOB.fires_list -= src
-
 /obj/effect/fire/Initialize(mapload)
 	. = ..()
+
 	set_light(3, 2, "#ffa800")
 	GLOB.fires_list += src
+
+/obj/effect/fire/Destroy()
+	. = ..()
+
+	set_light(0)
+	GLOB.fires_list -= src
 
 /obj/effect/fire/proc/change_stage(stag)
 	switch(stag)
